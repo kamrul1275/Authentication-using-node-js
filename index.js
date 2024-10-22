@@ -23,24 +23,65 @@ db.connect(err => {
 });
 
 // Registration route
-app.post('/register', async (req, res) => {
-    const { username,email, password } = req.body;
+// app.post('/register', async (req, res) => {
+//     const { username,email, password } = req.body;
 
-    if (!username ||!email || !password) {
-        return res.status(400).send('Username, email password, and  are required');
+//     if (!username ||!email || !password) {
+//         return res.status(400).send('Username, email password, and  are required');
+//     }
+
+//     try {
+//         const hashedPassword = await bcrypt.hash(password, 10);
+
+//         db.query('INSERT INTO users (username,email, password) VALUES (?, ?, ?)', [username,email, hashedPassword], (err, result) => {
+//             if (err) throw err;
+//             res.status(201).send('User registation successful');
+//         });
+//     } catch (error) {
+//         res.status(500).send('Error hashing password');
+//     }
+// });
+
+
+
+
+
+
+app.post('/register', async (req, res) => {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+        return res.status(400).send('Username, email, and password are required');
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        db.query('INSERT INTO users (username,email, password) VALUES (?, ?, ?)', [username,email, hashedPassword], (err, result) => {
+        // Check if the email already exists
+        db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
             if (err) throw err;
-            res.status(201).send('User registered');
+
+            if (results.length > 0) {
+                return res.status(409).send('Email already registered');
+            } else {
+                // Hash the password
+                const hashedPassword = await bcrypt.hash(password, 10);
+
+                // Insert the new user
+                db.query('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword], (err, result) => {
+                    if (err) throw err;
+                    res.status(201).send('User registration successful');
+                });
+            }
         });
     } catch (error) {
         res.status(500).send('Error hashing password');
     }
 });
+
+
+
+
+
+
 
 // Login route
 app.post('/login', (req, res) => {
@@ -71,6 +112,32 @@ app.post('/login', (req, res) => {
 
 });
 
+// Protected route
+app.get('/dashboard', authenticateToken ,(req, res) => {
+
+   
+    try {
+        res.send('Welcome to Dashboard.....');
+    } catch (error) {
+        res.status(500).send('Error');
+        
+    }
+});
+
+// Protected route
+app.get('/profile', authenticateToken, (req, res) => {
+
+    res.send('Profile');
+});
+
+// Protected route
+
+
+// logout
+app.post('/logout', (req, res) => {
+    res.send('Logout successful');
+});
+
 // update
 
 
@@ -98,6 +165,17 @@ app.delete('/profile/delete', authenticateToken, (req, res) => {
         res.send('Profile deleted');
     });
 });
+
+// Get profile route
+app.get('/profile', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    db.query('SELECT * FROM users WHERE id = ?', [userId], (err, results) => {
+        if (err) throw err;
+        res.json(results[0]);
+    });
+});
+
 
 
 
